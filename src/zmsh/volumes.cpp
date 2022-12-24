@@ -6,6 +6,7 @@
 #include <boost/multiprecision/eigen.hpp>
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
+#include <stdexcept>
 
 /**
  * Without this truly unsavory hack, we get a compile error to the effect of
@@ -36,7 +37,9 @@ namespace predicates {
         T volume(const Eigen::MatrixXd& zs) {
             const size_t m = zs.rows();
             const size_t n = zs.cols();
-            assert (n == m + 1);
+
+            if (n != m + 1)
+                throw std::invalid_argument("Wrong matrix size!");
 
             Matrix<T> ws(n, n);
             ws.row(0).setConstant(1);
@@ -55,11 +58,12 @@ namespace predicates {
 
         try {
             const auto result = internal::volume<Interval>(zs);
-            return boost::numeric::median(result);
+            if (not boost::numeric::zero_in(result))
+                return boost::numeric::median(result);
         }
-        catch (const boost::numeric::interval_lib::comparison_error& e) {
-            return internal::volume<Rational>(zs).convert_to<double>();
-        }
+        catch (const boost::numeric::interval_lib::comparison_error& e) {}
+
+        return internal::volume<Rational>(zs).convert_to<double>();
     }
 }
 
