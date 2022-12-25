@@ -6,7 +6,8 @@ ext_modules = [
     Pybind11Extension(
         "zmsh.volumes",
         sources=["src/zmsh/volumes.cpp"],
-        extra_compile_args=[pkgconfig.cflags("eigen3")],
+        extra_compile_args=[pkgconfig.cflags("eigen3"), pkgconfig.libs("gmp")],
+        extra_link_args=[pkgconfig.libs("gmp")],
         cxx_std=20,
     )
 ]

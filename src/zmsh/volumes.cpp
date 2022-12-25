@@ -2,8 +2,8 @@
 #include <Eigen/Dense>
 #include <boost/numeric/interval.hpp>
 #include <boost/numeric/interval/utility.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/eigen.hpp>
+#include <gmpxx.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 #include <stdexcept>
@@ -26,6 +26,32 @@ namespace std {
         enum { value = true };
     };
 } // namespace std
+
+
+/**
+ * Shims to make Eigen work with GMP rationals
+ */
+namespace Eigen {
+    template<> struct NumTraits<mpq_class> : GenericNumTraits<mpq_class> {
+        typedef mpq_class Real;
+        typedef mpq_class NonInteger;
+        typedef mpq_class Nested;
+
+        static inline Real epsilon() { return 0; }
+        static inline Real dummy_precision() { return 0; }
+        static inline int digits10() { return 0; }
+
+        enum {
+            IsInteger = 0,
+            IsSigned = 1,
+            IsComplex = 0,
+            RequireInitialization = 1,
+            ReadCost = 6,
+            AddCost = 150,
+            MulCost = 100
+        };
+    };
+}
 
 
 namespace predicates {
@@ -53,7 +79,7 @@ namespace predicates {
      * a first resort and rationals as a fallback.
      */
     double volume(const Eigen::MatrixXd& zs) {
-        using Rational = boost::multiprecision::cpp_rational;
+        using Rational = mpq_class;
         using Interval = boost::numeric::interval<double>;
 
         try {
@@ -63,7 +89,7 @@ namespace predicates {
         }
         catch (const boost::numeric::interval_lib::comparison_error& e) {}
 
-        return internal::volume<Rational>(zs).convert_to<double>();
+        return internal::volume<Rational>(zs).get_d();
     }
 }
 
