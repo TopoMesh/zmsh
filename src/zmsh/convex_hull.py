@@ -1,7 +1,7 @@
 from math import comb as binomial
 import numpy as np
 import scipy.sparse
-from . import predicates, simplicial, transformations
+from . import volumes, simplicial, transformations
 from .topology import Topology
 from .geometry import Geometry
 
@@ -53,7 +53,8 @@ class ConvexHullMachine:
                 edge_ids, signs = covertices[vertex_id]
                 if len(edge_ids) == 0:
                     z = self.geometry.points[vertex_id, :]
-                    volume = orientation * predicates.volume(z, *X)
+                    A = np.vstack((z, X)).T
+                    volume = orientation * volumes.volume(A)
                     if volume <= 0:
                         visible[vertex_id, cell_id] = volume
 
@@ -180,7 +181,8 @@ class ConvexHullMachine:
                 vertex_ids = self.visible.getcol(cell_id).nonzero()[0]
                 for vertex_id in vertex_ids:
                     z = self.geometry.points[vertex_id]
-                    volume = orientation * predicates.volume(z, *X)
+                    A = np.vstack((z, X)).T
+                    volume = orientation * volumes.volume(A)
                     if volume < 0:
                         self.visible[vertex_id, new_cell_id] = volume
 
