@@ -1,5 +1,6 @@
 import functools
 import numpy as np
+from .graph import EllpackArray
 
 
 def bits_set(z, size=8):
@@ -96,3 +97,60 @@ def orientation(As):
     Bs = simplex_to_chain_complex(len(As) - 1)
     ps, ss = compute_morphism(As[1:], Bs[1:])
     return ss[-1][0]
+
+
+class SimplicialTopology:
+    def __init__(self, dimension: int, num_cells: List[int]):
+        self._adjacency = [None] + [
+            np.ma.masked_array(
+                np.zeros((num_cells[n], n + 1), dtype=np.int32),
+                np.ones((num_cells[n], n + 1), dtype=bool),
+            )
+            for n in range(1, dimension + 1)
+        ]
+
+        self._coadjacency = [None] + [
+            np.ma.masked_array(
+                np.zeros((num_cells[n], 2), dtype=np.int32),
+                np.ones((num_cells[n], 2), dtype=bool),
+            )
+            for n in range(1, dimension + 1)
+        ]
+
+        self._free_cells = [None] + [
+            set(range(num_cells[n])) for n in range(1, dimension + 1)
+        ]
+
+    def find(self, vertices: List[int]) -> int:
+        r"""Return the integer ID of the given simplex if it exists, or
+        `None` if it does not"""
+        dimension = len(vertices) - 1
+        coadjacency = self._coadjacency[dimension]
+        cells = np.unique(coadjacency[vertices, :]).compressed()
+        adjacency = self._adjacency[dimension]
+        for cell in cells:
+            cell_vertices = adjacency[cell, :]
+            if all(v in cell_vertices for v in vertices):
+                return cell
+
+        return None
+
+    def _pop_free_cell_index(self, dimension: int) -> int:
+        if len(self._free_cells[dimension]) == 0:
+            raise NotImplementedError("Can't increase topology size yet!")
+        return self._free_cells[dimension].pop()
+
+    def _add1(self, dimension, vertices):
+        if self.find(vertices) is not None:
+            return
+        index = self._pop_free_cell_index(dimension)
+        self._adjacency[dimension][index] = vertices
+
+        for vertex in vertices:
+            cells = self._coadjacency[dimension][vertex, :].compressed()
+            # TODO: Miracle occurs...
+
+    def add(self, vertices):
+        for dimension in range(len(vertices) - 1, 0, -1):
+            for fvertices in itertools.combinations(vertices, dimension + 1):
+                self._add1(dimension, fvertices)
