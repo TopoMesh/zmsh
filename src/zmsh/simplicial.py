@@ -1,6 +1,5 @@
 import functools
 import numpy as np
-from .graph import EllpackArray
 
 
 def bits_set(z, size=8):
